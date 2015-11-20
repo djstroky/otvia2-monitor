@@ -14,9 +14,11 @@ dist/
 downloads/
 eggs/
 .eggs/
+Include/
 lib/
 lib64/
 parts/
+Scripts/
 sdist/
 var/
 *.egg-info/
@@ -55,3 +57,11 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Eclipse
+.project
+.pydevproject
+
+# project deets
+config/
+data/
