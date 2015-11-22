@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import datetime
 import csv
 import os
@@ -27,51 +28,85 @@ def flattenjson(b, delim):
     return val
 
 
-def make_dt():
-    return datetime.strftime(datetime.now(), '%Y-%m-%d-%H-%M-%S')
+def format_dt(dt=datetime.now(), fmt='%Y-%m-%d %H:%M:%S'):
+    return datetime.strftime(dt, fmt)
+
+
+def get_writer(base, fields):
+    dt = format_dt(fmt='%Y-%m-%d')
+    filename = os.path.join(DATA_DIR, base + '_' + dt + '.csv')
+    
+    if not os.path.exists(filename):
+        writer = csv.DictWriter(open(filename, 'wb'), fieldnames=fields)
+        writer.writeheader()
+    else:
+        writer = csv.DictWriter(open(filename, 'ab'), fieldnames=fields)
+        
+    return writer
+
+
+def parse_vehicle(json):
+    '''Parses vehicle json response
+    
+    Returns:
+        dict: summary stats about all vehicles
+    '''
+    
+    writer = get_writer('vehicle', 
+                        ['Timestamp',
+                         'Vehicle ID',
+                         'Route ID',
+                         'Pattern ID',
+                         'Work Piece ID',
+                         'Providing Updates',
+                         'Location Timestamp',
+                         'Location Latitude',
+                         'Location Longitude'])
+    
+    summary = Counter()
+    
+    for vehicle in json['VehicleArray']:
+        summary['Number of Vehicles'] += 1
+        vehicle = vehicle['vehicle']
+        vout = dict(Timestamp=format_dt())
+        vout['Vehicle ID'] = vehicle['id']
+        vout['Route ID'] = vehicle['routeID']
+        if vehicle['routeID'] != 0:
+            summary['Number of Vehicles with a Route ID Assigned'] += 1
+        vout['Pattern ID'] = vehicle['patternID']
+        vout['Work Piece ID'] = vehicle['workPieceID']
+        vout['Providing Updates'] = vehicle['update'] 
+        if 'CVLocation' in vehicle:
+            summary['Number of Vehicles with Location Data'] += 1
+            with vehicle['CVLocation'] as location:
+                stamp = format_dt(datetime.fromtimestamp(location['locTime']))
+                vout['Location Timestamp'] = stamp
+                vout['Location Latitude'] = location['latitude'] / 100000
+                vout['Location Longitude'] = location['longitude'] / 100000
+
+        writer.writerow(vout)
+        
+    return summary
+
+
+def collect_for_type(url, parser):
+    '''Fetch data a given url and feed to parser.
+    
+    Returns
+        Counter: result of parser
+    '''
+    
+    conf = get_config()
+    
+    res = requests.get(conf.get('host') + url)
+    return parser(res.json())
 
 
 def collect():
+    '''Main function to collect all data for the current time.
+    '''
     
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
+    '''stops = collect_for_type('/art/packet/json/shelter',
+                             parse_stop)'''
     
-    conf = get_config()
-
-    res = requests.get(conf.get('host') + '/art/packet/json/shelter')
-    json = res.json()
-    
-    csvfile = open(os.path.join(DATA_DIR, 'art_log_shelter' + make_dt()), 'wb')
-    
-    fieldnames = []
-    
-    # get field names
-    for shelter in json['ShelterArray']:
-        for item in flattenjson(shelter['Shelter'], '__').keys():
-            if item not in fieldnames:
-                fieldnames.append(item)
-    
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
-    
-    for shelter in json['ShelterArray']:
-        writer.writerow(flattenjson(shelter['Shelter'], '__'))
-        
-    res = requests.get(conf.get('host') + '/art/packet/json/vehicle')
-    json = res.json()
-    
-    csvfile = open(os.path.join(DATA_DIR, 'art_log_vehicle' + make_dt()), 'wb')
-    
-    fieldnames = []
-    
-    # get field names
-    for vehicle in json['VehicleArray']:
-        for item in flattenjson(vehicle['vehicle'], '__').keys():
-            if item not in fieldnames:
-                fieldnames.append(item)
-    
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
-    
-    for vehicle in json['VehicleArray']:
-        writer.writerow(flattenjson(vehicle['vehicle'], '__'))
+    vehicle_summary = collect_for_type('/art/packet/json/vehicle', parse_vehicle)
