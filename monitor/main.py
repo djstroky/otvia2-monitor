@@ -65,7 +65,7 @@ def parse_stop(json):
     for stop in json['ShelterArray']:
         stop = stop['Shelter']
         
-        summary['Number of Routes'] += 1
+        summary['Number of Routes'] += len(stop['routeLogNumbers'])
         
         sout = dict(Timestamp=format_dt())
         sout['Stop ID'] = stop['ShelterId']
@@ -119,6 +119,7 @@ def parse_vehicle(json):
         vout['Work Piece ID'] = vehicle['workPieceID']
         vout['Providing Updates'] = vehicle['update'] 
         if 'CVLocation' in vehicle:
+            print vehicle
             summary['Number of Vehicles with Location Data'] += 1
             with vehicle['CVLocation'] as location:
                 stamp = format_dt(datetime.fromtimestamp(location['locTime']))
@@ -152,3 +153,26 @@ def collect():
                                     parse_stop)
     
     vehicle_summary = collect_for_type('/art/packet/json/vehicle', parse_vehicle)
+    
+    sum_fields = ['Timestamp',
+                  'Number of Vehicles',
+                  'Number of Vehicles with a Route ID Assigned',
+                  'Number of Vehicles with Location Data',
+                  'Number of Routes',
+                  'Routes with Predictions']
+    
+    writer = get_writer('summary', sum_fields)
+    
+    sum_row = dict(Timestamp=format_dt())
+    
+    for k in stop_summary:
+        sum_row[k] = stop_summary[k]
+        
+    for k in vehicle_summary:
+        sum_row[k] = vehicle_summary[k]
+        
+    for k in sum_fields:
+        if k not in sum_row:
+            sum_row[k] = '0'
+        
+    writer.writerow(sum_row)
