@@ -45,6 +45,48 @@ def get_writer(base, fields):
     return writer
 
 
+def parse_stop(json):
+    '''Parses stop json response
+    
+    Returns:
+        dict: summary stats about all stops
+    '''
+    
+    writer = get_writer('stop', 
+                        ['Timestamp',
+                         'Stop ID',
+                         'Stop Name',
+                         'Number of Routes',
+                         'Number of Predictions',
+                         'Routes with Predictions'])
+    
+    summary = Counter()
+    
+    for stop in json['ShelterArray']:
+        stop = stop['Shelter']
+        
+        summary['Number of Routes'] += 1
+        
+        sout = dict(Timestamp=format_dt())
+        sout['Stop ID'] = stop['ShelterId']
+        sout['Stop Name'] = stop['ShelterName']
+        sout['Number of Routes'] = len(stop['routeLogNumbers'])
+        num_predictions = 0
+        prediction_routes = ''
+        pre = 'shelterPred' + str(stop['ShelterId'])
+        for k in stop['PredictionTimes']:
+            num_predictions += 1
+            prediction_routes += '%s ' % k.split('-')[0].replace(pre, '')
+            summary['Routes with Predictions'] += 1
+            
+        sout['Number of Predictions'] = num_predictions
+        sout['Routes with Predictions'] = prediction_routes
+        
+        writer.writerow(sout)
+        
+    return summary
+
+
 def parse_vehicle(json):
     '''Parses vehicle json response
     
@@ -106,7 +148,7 @@ def collect():
     '''Main function to collect all data for the current time.
     '''
     
-    '''stops = collect_for_type('/art/packet/json/shelter',
-                             parse_stop)'''
+    stop_summary = collect_for_type('/art/packet/json/shelter',
+                                    parse_stop)
     
     vehicle_summary = collect_for_type('/art/packet/json/vehicle', parse_vehicle)
