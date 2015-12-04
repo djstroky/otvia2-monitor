@@ -2,6 +2,7 @@ from collections import Counter
 from datetime import datetime
 import csv
 import os
+import zipfile
 
 import requests
 
@@ -32,11 +33,30 @@ def format_dt(dt=datetime.now(), fmt='%Y-%m-%d %H:%M:%S'):
     return datetime.strftime(dt, fmt)
 
 
+def do_rollover(base):
+    ''' Rollover files.
+    Delete anything over 45 days.
+    Zip anything not zipped over 7 days.'''
+    
+    for f in os.listdir(DATA_DIR):
+        if f.find(base) > -1:
+            f1, ext = os.path.splitext(f)
+            dt_diff = datetime.now() - datetime.strptime(f1.replace(base + '_', ''), '%Y-%m-%d')
+            if dt_diff.days > 45:
+                os.remove(os.path.join(DATA_DIR, f))
+            elif dt_diff.days > 7 and ext == '.csv':
+                zf = zipfile.ZipFile(os.path.join(DATA_DIR, "%s.zip" % (f1)), "w", zipfile.ZIP_DEFLATED)
+                zf.write(os.path.join(DATA_DIR, f), f)
+                zf.close()
+                os.remove(os.path.join(DATA_DIR, f))       
+
+
 def get_writer(base, fields):
     dt = format_dt(fmt='%Y-%m-%d')
     filename = os.path.join(DATA_DIR, base + '_' + dt + '.csv')
     
     if not os.path.exists(filename):
+        do_rollover(base)
         writer = csv.DictWriter(open(filename, 'wb'), fieldnames=fields)
         writer.writeheader()
     else:
