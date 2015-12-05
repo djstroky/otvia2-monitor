@@ -4,11 +4,13 @@ setup(
     name='monitor',
     packages=find_packages(),
     install_requires=[
-        'requests>=2.5.3'
+        'requests>=2.5.3',
+        'deploy_utils>=0.1.0'
     ],
     entry_points={
         'console_scripts': [
-            'monitor=monitor.main:collect'
+            'monitor=monitor.main:collect',
+            'deploy=monitor.deploy:deploy'
         ]
     }
 )
