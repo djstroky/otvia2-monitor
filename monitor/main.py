@@ -169,6 +169,11 @@ def collect():
     '''Main function to collect all data for the current time.
     '''
     
+    try:
+        os.mkdir(DATA_DIR)
+    except:
+        pass
+    
     stop_summary = collect_for_type('/art/packet/json/shelter',
                                     parse_stop)
     
