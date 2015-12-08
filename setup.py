@@ -5,7 +5,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'requests>=2.5.3',
-        'deploy_utils>=0.1.0'
+        'deploy_utils>=0.2.0'
     ],
     entry_points={
         'console_scripts': [

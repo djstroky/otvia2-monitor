@@ -39,6 +39,10 @@ class OTVia2Fab(AmazonLinuxFab):
             # install run scripts
             self.venv('python setup.py develop')
             
+            # install node.js server
+            run('npm install')
+            run('forever start --uid "otvia2-monitor" server/index.js')
+            
         # test run of monitor
         run(unix_path_join(self.user_home, 'otvia2-monitor', 'bin', 'monitor'))
         
@@ -58,6 +62,7 @@ def deploy():
         fab.update_system()
         fab.install_custom_monitoring()
         fab.install_git()
+        fab.install_node()
         fab.install_monitor()
     except:
         if tear_down_on_error:

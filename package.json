@@ -1,0 +1,30 @@
+{
+  "name": "otvia2-monitor",
+  "version": "0.0.0",
+  "description": "Scripts and a web interface to monitor stats obtained from a otvia2 instance.",
+  "main": "server/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evansiroky/otvia2-monitor.git"
+  },
+  "keywords": [
+    "otvia2",
+    "transit"
+  ],
+  "author": "Evan Siroky",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/evansiroky/otvia2-monitor/issues"
+  },
+  "homepage": "https://github.com/evansiroky/otvia2-monitor#readme",
+  "dependencies": {
+    "basic-auth": "^1.0.3",
+    "express": "^4.13.3",
+    "logrotate-stream": "^0.2.5",
+    "morgan": "^1.6.1",
+    "serve-index": "^1.7.2"
+  }
+}

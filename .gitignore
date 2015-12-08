@@ -64,6 +64,9 @@ target/
 .project
 .pydevproject
 
+# node
+node_modules/
+
 # project deets
 config/
 data/
