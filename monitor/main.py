@@ -5,64 +5,86 @@ import os
 import zipfile
 
 import requests
+from requests.exceptions import ConnectionError
 
 from monitor import DATA_DIR
 from monitor.config import get_config
 
 
-def flattenjson(b, delim):
-    val = {}
-    for i in b.keys():
-        if isinstance(b[i], dict):
-            if i == 'PredictionTimes':
-                val[i] = delim.join([j + delim + str(b[i][j]) for j in b[i].keys()])
-            else:
-                get = flattenjson(b[i], delim)
-                for j in get.keys():
-                    val[i + delim + j] = get[j]
-        elif isinstance(b[i], list):
-            for j in range(len(b[i])):
-                val[i + '[' + str(j) + ']'] = b[i][j]
-        else:
-            val[i] = b[i]
+class CSVWriter2:
 
-    return val
+    def __init__(self, base, fields):
+
+        self.base = base
+        self.fields = fields
+
+        dt = format_dt(fmt='%Y-%m-%d')
+
+        # prepare archive file for writing
+        archive_filename = os.path.join(DATA_DIR, base + '_' + dt + '.csv')
+
+        if not os.path.exists(archive_filename):
+            self.do_rollover()
+            self.archive_writer = csv.DictWriter(open(archive_filename, 'wb'), fieldnames=fields)
+            self.archive_writer.writeheader()
+        else:
+            self.archive_writer = csv.DictWriter(open(archive_filename, 'ab'), fieldnames=fields)
+
+        # prepare last 2 hours file for writing
+        recent_filename = os.path.join(DATA_DIR, base + '_last_2_hours.csv')
+
+        if not os.path.exists(recent_filename):
+            self.recent_writer = csv.DictWriter(open(recent_filename, 'wb'), fieldnames=fields)
+            self.recent_writer.writeheader()
+        else:
+            # file exists, copy data less than 2 hours old to temp file
+            temp_out_filename = os.path.join(DATA_DIR, base + '_temp.csv')
+
+            with open(recent_filename) as recent, open(temp_out_filename, 'wb') as temp:
+                rdr = csv.reader(recent)
+                temp_wrtr = csv.writer(temp)
+
+                first_row = True
+                for row in rdr:
+                    if first_row:
+                        temp_wrtr.writerow(row)
+                        first_row = False
+                        continue
+
+                    dt = datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
+                    if (datetime.now() - dt).seconds < 7200:
+                        temp_wrtr.writerow(row)
+
+            os.remove(recent_filename)
+            os.rename(temp_out_filename, recent_filename)
+
+            # done copying, open in append mode
+            self.recent_writer = csv.DictWriter(open(recent_filename, 'ab'), fieldnames=fields)
+
+    def writerow(self, row):
+        self.archive_writer.writerow(row)
+        self.recent_writer.writerow(row)
+
+    def do_rollover(self):
+        ''' Rollover files.
+        Delete anything over 45 days.
+        Zip anything not zipped over 7 days.'''
+
+        for f in os.listdir(DATA_DIR):
+            if f.find(self.base) > -1:
+                f1, ext = os.path.splitext(f)
+                dt_diff = datetime.now() - datetime.strptime(f1.replace(self.base + '_', ''), '%Y-%m-%d')
+                if dt_diff.days > 45:
+                    os.remove(os.path.join(DATA_DIR, f))
+                elif dt_diff.days > 7 and ext == '.csv':
+                    zf = zipfile.ZipFile(os.path.join(DATA_DIR, "%s.zip" % (f1)), "w", zipfile.ZIP_DEFLATED)
+                    zf.write(os.path.join(DATA_DIR, f), f)
+                    zf.close()
+                    os.remove(os.path.join(DATA_DIR, f))
 
 
 def format_dt(dt=datetime.now(), fmt='%Y-%m-%d %H:%M:%S'):
     return datetime.strftime(dt, fmt)
-
-
-def do_rollover(base):
-    ''' Rollover files.
-    Delete anything over 45 days.
-    Zip anything not zipped over 7 days.'''
-    
-    for f in os.listdir(DATA_DIR):
-        if f.find(base) > -1:
-            f1, ext = os.path.splitext(f)
-            dt_diff = datetime.now() - datetime.strptime(f1.replace(base + '_', ''), '%Y-%m-%d')
-            if dt_diff.days > 45:
-                os.remove(os.path.join(DATA_DIR, f))
-            elif dt_diff.days > 7 and ext == '.csv':
-                zf = zipfile.ZipFile(os.path.join(DATA_DIR, "%s.zip" % (f1)), "w", zipfile.ZIP_DEFLATED)
-                zf.write(os.path.join(DATA_DIR, f), f)
-                zf.close()
-                os.remove(os.path.join(DATA_DIR, f))       
-
-
-def get_writer(base, fields):
-    dt = format_dt(fmt='%Y-%m-%d')
-    filename = os.path.join(DATA_DIR, base + '_' + dt + '.csv')
-    
-    if not os.path.exists(filename):
-        do_rollover(base)
-        writer = csv.DictWriter(open(filename, 'wb'), fieldnames=fields)
-        writer.writeheader()
-    else:
-        writer = csv.DictWriter(open(filename, 'ab'), fieldnames=fields)
-        
-    return writer
 
 
 def parse_stop(json):
@@ -72,7 +94,7 @@ def parse_stop(json):
         dict: summary stats about all stops
     '''
     
-    writer = get_writer('stop', 
+    writer = CSVWriter2('stop',
                         ['Timestamp',
                          'Stop ID',
                          'Stop Name',
@@ -114,7 +136,7 @@ def parse_vehicle(json):
         dict: summary stats about all vehicles
     '''
     
-    writer = get_writer('vehicle', 
+    writer = CSVWriter2('vehicle',
                         ['Timestamp',
                          'Vehicle ID',
                          'Route ID',
@@ -139,7 +161,7 @@ def parse_vehicle(json):
         vout['Work Piece ID'] = vehicle['workPieceID']
         vout['Providing Updates'] = vehicle['update'] 
         if 'CVLocation' in vehicle:
-            print vehicle
+            #print vehicle
             summary['Number of Vehicles with Location Data'] += 1
             with vehicle['CVLocation'] as location:
                 stamp = format_dt(datetime.fromtimestamp(location['locTime']))
@@ -161,8 +183,13 @@ def collect_for_type(url, parser):
     
     conf = get_config()
     
-    res = requests.get(conf.get('host') + url)
-    return parser(res.json())
+    try:
+        res = requests.get(conf.get('host') + url)
+        out = res.json()
+    except ConnectionError:
+        out = []
+
+    return parser(out)
 
 
 def collect():
@@ -174,8 +201,7 @@ def collect():
     except:
         pass
     
-    stop_summary = collect_for_type('/art/packet/json/shelter',
-                                    parse_stop)
+    stop_summary = collect_for_type('/art/packet/json/shelter', parse_stop)
     
     vehicle_summary = collect_for_type('/art/packet/json/vehicle', parse_vehicle)
     
@@ -186,7 +212,7 @@ def collect():
                   'Number of Routes',
                   'Routes with Predictions']
     
-    writer = get_writer('summary', sum_fields)
+    writer = CSVWriter2('summary', sum_fields)
     
     sum_row = dict(Timestamp=format_dt())
     

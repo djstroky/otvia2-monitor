@@ -63,6 +63,7 @@ target/
 # Eclipse
 .project
 .pydevproject
+.idea/
 
 # node
 node_modules/
@@ -70,3 +71,5 @@ node_modules/
 # project deets
 config/
 data/
+server/static
+server/js/config.js

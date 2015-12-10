@@ -1,6 +1,9 @@
+import os
+
 from deploy_utils.config import ConfigHelper
 from deploy_utils.ec2 import launch_new_ec2, tear_down
 from deploy_utils.fab import AmazonLinuxFab, unix_path_join
+from fab_deploy.crontab import crontab_update
 from fabric.api import run, sudo, cd, put
 from fabric.context_managers import prefix
 
@@ -41,10 +44,29 @@ class OTVia2Fab(AmazonLinuxFab):
             
             # install node.js server
             run('npm install')
-            run('forever start --uid "otvia2-monitor" server/index.js')
+            server_cfg = dict(server_admin_username=monitor_conf.get('server_admin_username'),
+                              server_admin_password=monitor_conf.get('server_admin_password'),
+                              server_access_username=monitor_conf.get('server_access_username'),
+                              server_access_password=monitor_conf.get('server_access_password'))
+            put(ConfHelper.write_template(server_cfg, 'server.js'),
+                'config')
             
-        # test run of monitor
-        run(unix_path_join(self.user_home, 'otvia2-monitor', 'bin', 'monitor'))
+            # redirect port 80 to 3000 for node app
+            sudo('iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000')
+            sudo('service iptables save')
+            
+            # start server
+            run('forever start -a --uid "otvia2-monitor" server/index.js')
+            
+        # install cron to run monitor script
+        with open(os.path.join(TEMPLATE_DIR, 'monitor_crontab')) as f:
+            cron_template = f.read()
+            
+        collect_script = unix_path_join(self.user_home, 'otvia2-monitor', 'bin', 'monitor')
+        cron_settings = dict(cron_email=monitor_conf.get('cron_email'),
+                             path_to_monitor_script=collect_script)
+        cron = cron_template.format(**cron_settings)
+        crontab_update(cron, 'otvia2_data_collection')
         
 
 def deploy():

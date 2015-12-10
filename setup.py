@@ -5,7 +5,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         'requests>=2.5.3',
-        'deploy_utils>=0.2.0'
+        'deploy_utils>=0.2.0',
+        'django-fab-deploy>=0.7.5'
     ],
     entry_points={
         'console_scripts': [

@@ -1,0 +1,2 @@
+MAILTO={cron_email}
+*/5 * * * * {path_to_monitor_script}
