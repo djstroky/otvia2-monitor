@@ -43,13 +43,21 @@ class OTVia2Fab(AmazonLinuxFab):
             self.venv('python setup.py develop')
             
             # install node.js server
-            run('npm install')
             server_cfg = dict(server_admin_username=monitor_conf.get('server_admin_username'),
                               server_admin_password=monitor_conf.get('server_admin_password'),
                               server_access_username=monitor_conf.get('server_access_username'),
                               server_access_password=monitor_conf.get('server_access_password'))
+
             put(ConfHelper.write_template(server_cfg, 'server.js'),
                 'config')
+
+            put(ConfHelper.write_template(dict(google_analytics_tracking_id=\
+                                               monitor_conf.get('google_analytics_tracking_id')),
+                                          'web.js'),
+                'config')
+
+            run('npm install')
+            run('npm run build')
             
             # redirect port 80 to 3000 for node app
             sudo('iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000')

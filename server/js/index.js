@@ -4,7 +4,7 @@ var $ = require('jquery'),
   config = require('./config.js'),
   footable = require('footable')
 
-var chart, tableTemplate
+var chart
 
 var receiveData = function(data) {
   drawChart(data.summary)
