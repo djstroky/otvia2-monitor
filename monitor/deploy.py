@@ -70,7 +70,8 @@ class OTVia2Fab(AmazonLinuxFab):
             cron_template = f.read()
             
         collect_script = unix_path_join(self.user_home, 'otvia2-monitor', 'bin', 'monitor')
-        cron_settings = dict(cron_email=monitor_conf.get('cron_email'),
+
+        cron_settings = dict(cron_email=self.conf.get('cron_email'),
                              path_to_monitor_script=collect_script)
         cron = cron_template.format(**cron_settings)
         crontab_update(cron, 'otvia2_data_collection')
