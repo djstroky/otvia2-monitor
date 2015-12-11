@@ -19,7 +19,7 @@ lib/
 Lib/
 lib64/
 parts/
-Scripts/
+/Scripts/
 sdist/
 var/
 *.egg-info/

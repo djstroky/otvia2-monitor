@@ -35,10 +35,9 @@ class OTVia2Fab(AmazonLinuxFab):
             
             # upload monitoring config
             run('mkdir config')
-            put(ConfHelper.write_template(dict(host=monitor_conf.get('host')), 
-                                          'monitor.ini'),
-                'config')
-            
+
+            put(os.path.join(CONFIG_DIR, 'monitor.ini'), 'config/')
+
             # install run scripts
             self.venv('python setup.py develop')
             
@@ -83,6 +82,11 @@ def deploy():
         
     # launch ec2
     ec2_conf = ConfHelper.get_config('aws')
+
+    fab = OTVia2Fab(ec2_conf, '52.53.249.239')
+    fab.install_monitor()
+    return
+
     ec2_instance, ec2_connection = launch_new_ec2(ec2_conf, True)
     
     try:
