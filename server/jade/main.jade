@@ -1,1 +1,18 @@
-h2 Hello World
+#header
+  h1 OTVia2 Monitor
+#control_bar
+  p
+    a(href='/data') View Data Archive
+    label(for='recent_select') View Recent Data In:
+    select#recent_select
+      option(value='30') Last 30 minutes
+      option(value='60') Last hour
+      option(value='120') Last 2 hours
+#chart
+#tables
+  h2 Summary
+  table.table#summary_table
+  h2 Stop
+  table.table#stop_table
+  h2 Vehicle
+  table.table#vehicle_table

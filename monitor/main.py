@@ -71,7 +71,7 @@ class CSVWriter2:
         Zip anything not zipped over 7 days.'''
 
         for f in os.listdir(DATA_DIR):
-            if f.find(self.base) > -1:
+            if f.find(self.base) > -1 and f.find('last_2_hours') == -1:
                 f1, ext = os.path.splitext(f)
                 dt_diff = datetime.now() - datetime.strptime(f1.replace(self.base + '_', ''), '%Y-%m-%d')
                 if dt_diff.days > 45:

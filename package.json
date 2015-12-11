@@ -24,12 +24,11 @@
     "build:html-dev": "jade server/jade/index.jade -P -o server/static",
     "build": "npm run build:js && npm run build:html && npm run build:css",
     "build-dev": "npm run build:js-dev && npm run build:html-dev && npm run build:css-dev",
-    "build-dev:watch": "npm run prebuild:js-dev && parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:assets\" \"npm run watch:html\"",
+    "build-dev:watch": "npm run prebuild:js-dev && parallelshell \"npm run watch:js\" \"npm run watch:css\" \"npm run watch:html\"",
     "start": "node index.js",
-    "watch:js": "watch \"npm run build:js-dev-watch\" js",
-    "watch:css": "watch \"npm run build:css-dev\" styles",
-    "watch:assets": "watch \"npm run build:css-dev\" assets",
-    "watch:html": "watch \"npm run build:html-dev\" jade"
+    "watch:js": "watch \"npm run build:js-dev-watch\" server/js",
+    "watch:css": "watch \"npm run build:css-dev\" server/styles",
+    "watch:html": "watch \"npm run build:html-dev\" server/jade"
   },
   "repository": {
     "type": "git",
@@ -48,7 +47,8 @@
   "browser": {
     "jquery": "./node_modules/jquery/dist/jquery.min.js",
     "d3": "./node_modules/d3/d3.min.js",
-    "c3": "./server/js/c3.min.js"
+    "c3": "./server/js/c3.min.js",
+    "footable": "./server/js/footable.min.js"
   },
   "browserify": {
     "transform": [
@@ -56,6 +56,7 @@
     ]
   },
   "browserify-shim": {
+    "moment": "moment",
     "jquery": "$",
     "d3": "d3",
     "c3": {
@@ -63,18 +64,24 @@
       "depends": [
         "d3"
       ]
+    },
+    "footable": {
+      "exports": "$.footable",
+      "depends": [
+        "jquery:$"
+      ]
     }
   },
   "cssBuild": {
-    "inFiles": [
-      "server/styles/resets.css"
-    ],
     "outFile": "server/static/main.css"
   },
   "dependencies": {
+    "async": "^1.5.0",
     "basic-auth": "^1.0.3",
+    "csv": "^0.4.6",
     "express": "^4.13.3",
     "logrotate-stream": "^0.2.5",
+    "moment": "^2.10.6",
     "morgan": "^1.6.1",
     "serve-index": "^1.7.2"
   },
