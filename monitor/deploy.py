@@ -83,11 +83,6 @@ def deploy():
         
     # launch ec2
     ec2_conf = ConfHelper.get_config('aws')
-
-    fab = OTVia2Fab(ec2_conf, '52.53.249.239')
-    fab.install_monitor()
-    return
-
     ec2_instance, ec2_connection = launch_new_ec2(ec2_conf, True)
     
     try:
