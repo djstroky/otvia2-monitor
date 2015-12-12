@@ -93,16 +93,21 @@ def parse_stop(json):
     Returns:
         dict: summary stats about all stops
     '''
+
+    fields = ['Timestamp',
+              'Stop ID',
+              'Stop Name',
+              'Number of Routes',
+              'Number of Predictions',
+              'Routes with Predictions']
     
-    writer = CSVWriter2('stop',
-                        ['Timestamp',
-                         'Stop ID',
-                         'Stop Name',
-                         'Number of Routes',
-                         'Number of Predictions',
-                         'Routes with Predictions'])
+    writer = CSVWriter2('stop', fields)
     
     summary = Counter()
+
+    if not json or 'ShelterArray' not in json:
+        writer.writerow(['No Data' for _ in range(len(fields))])
+        return summary
     
     for stop in json['ShelterArray']:
         stop = stop['Shelter']
@@ -135,19 +140,24 @@ def parse_vehicle(json):
     Returns:
         dict: summary stats about all vehicles
     '''
+
+    fields = ['Timestamp',
+              'Vehicle ID',
+              'Route ID',
+              'Pattern ID',
+              'Work Piece ID',
+              'Providing Updates',
+              'Location Timestamp',
+              'Location Latitude',
+              'Location Longitude']
     
-    writer = CSVWriter2('vehicle',
-                        ['Timestamp',
-                         'Vehicle ID',
-                         'Route ID',
-                         'Pattern ID',
-                         'Work Piece ID',
-                         'Providing Updates',
-                         'Location Timestamp',
-                         'Location Latitude',
-                         'Location Longitude'])
+    writer = CSVWriter2('vehicle', fields)
     
     summary = Counter()
+
+    if not json or 'VehicleArray' not in json:
+        writer.writerow(['No Data' for _ in range(len(fields))])
+        return summary
     
     for vehicle in json['VehicleArray']:
         summary['Number of Vehicles'] += 1
@@ -163,11 +173,11 @@ def parse_vehicle(json):
         if 'CVLocation' in vehicle:
             #print vehicle
             summary['Number of Vehicles with Location Data'] += 1
-            with vehicle['CVLocation'] as location:
-                stamp = format_dt(datetime.fromtimestamp(location['locTime']))
-                vout['Location Timestamp'] = stamp
-                vout['Location Latitude'] = location['latitude'] / 100000
-                vout['Location Longitude'] = location['longitude'] / 100000
+            location = vehicle['CVLocation']
+            stamp = format_dt(datetime.fromtimestamp(location['locTime']))
+            vout['Location Timestamp'] = stamp
+            vout['Location Latitude'] = location['latitude'] / 100000
+            vout['Location Longitude'] = location['longitude'] / 100000
 
         writer.writerow(vout)
         
@@ -187,7 +197,7 @@ def collect_for_type(url, parser):
         res = requests.get(conf.get('host') + url)
         out = res.json()
     except ConnectionError:
-        out = []
+        out = None
 
     return parser(out)
 
