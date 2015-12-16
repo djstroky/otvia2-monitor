@@ -4,6 +4,7 @@ import csv
 import os
 import zipfile
 
+from bs4 import BeautifulSoup
 import requests
 from requests.exceptions import ConnectionError
 
@@ -87,6 +88,26 @@ def format_dt(dt=datetime.now(), fmt='%Y-%m-%d %H:%M:%S'):
     return datetime.strftime(dt, fmt)
 
 
+def parse_stop_html(html):
+    '''Parses stop html and outputs it without lengthy markup
+    '''
+
+    out = ''
+
+    soup = BeautifulSoup(html, 'html.parser')
+    out += soup.find_all(class_='labelShelterHeaderStopRow')[0].text.strip()
+    out += '<br />'
+
+    rs_listing = soup.find_all(class_='labelShelterRouteListing')[0]
+
+    for rs in rs_listing.find_all('div'):
+        rs_text = rs.text.strip()
+        if len(rs_text) > 0:
+            out += rs_text + '<br />'
+
+    return unicode(out).encode('utf-8')
+
+
 def parse_stop(json):
     '''Parses stop json response
     
@@ -99,7 +120,9 @@ def parse_stop(json):
               'Stop Name',
               'Number of Routes',
               'Number of Predictions',
-              'Routes with Predictions']
+              'Number of Routes with Predictions',
+              'Routes with Predictions',
+              'Display Text']
     
     writer = CSVWriter2('stop', fields)
     
@@ -112,22 +135,24 @@ def parse_stop(json):
     for stop in json['ShelterArray']:
         stop = stop['Shelter']
         
-        summary['Number of Routes'] += len(stop['routeLogNumbers'])
+        summary['Number of Route-Stop Pairs'] += len(stop['routeLogNumbers'])
         
         sout = dict(Timestamp=format_dt())
         sout['Stop ID'] = stop['ShelterId']
         sout['Stop Name'] = stop['ShelterName']
         sout['Number of Routes'] = len(stop['routeLogNumbers'])
+        sout['Display Text'] = parse_stop_html(stop['WebLabel'])
         num_predictions = 0
-        prediction_routes = ''
+        routes_with_predictions = set()
         pre = 'shelterPred' + str(stop['ShelterId'])
         for k in stop['PredictionTimes']:
             num_predictions += 1
-            prediction_routes += '%s ' % k.split('-')[0].replace(pre, '')
-            summary['Routes with Predictions'] += 1
+            routes_with_predictions.add(k.split('-')[0].replace(pre, ''))
             
         sout['Number of Predictions'] = num_predictions
-        sout['Routes with Predictions'] = prediction_routes
+        sout['Routes with Predictions'] = ' '.join(list(routes_with_predictions))
+        sout['Number of Routes with Predictions'] = len(routes_with_predictions)
+        summary['Number of Route-Stop Pairs with Predictions'] += len(routes_with_predictions)
         
         writer.writerow(sout)
         
@@ -219,8 +244,8 @@ def collect():
                   'Number of Vehicles',
                   'Number of Vehicles with a Route ID Assigned',
                   'Number of Vehicles with Location Data',
-                  'Number of Routes',
-                  'Routes with Predictions']
+                  'Number of Route-Stop Pairs',
+                  'Number of Route-Stop Pairs with Predictions']
     
     writer = CSVWriter2('summary', sum_fields)
     

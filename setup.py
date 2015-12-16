@@ -4,9 +4,10 @@ setup(
     name='monitor',
     packages=find_packages(),
     install_requires=[
-        'requests>=2.5.3',
+        'beautifulsoup4>=4.4.1',
         'deploy_utils>=0.2.0',
-        'django-fab-deploy>=0.7.5'
+        'django-fab-deploy>=0.7.5',
+        'requests>=2.5.3'
     ],
     entry_points={
         'console_scripts': [

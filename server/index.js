@@ -50,16 +50,17 @@ app.get('/recent', function(req, res) {
       // it's a real PITA to find a csv module that will give you the header
       // so I'm hardcoding them
       if(name === 'summary') {
-        var out = [['Timestamp', 'Number of Vehicles', 'Number of Vehicles with a Route ID Assigned', 'Number of Vehicles with Location Data', 'Number of Routes', 'Routes with Predictions']]
+        var out = [['Timestamp', 'Number of Vehicles', 'Number of Vehicles with a Route ID Assigned', 'Number of Vehicles with Location Data', 'Number of Route-Stop Pairs', 'Number of Route-Stop Pairs with Predictions']]
       } else if(name === 'stop') {
-        var out = [['Timestamp', 'Stop ID', 'Stop Name', 'Number of Routes', 'Number of Predictions', 'Routes with Predictions']]
+        var out = [['Timestamp', 'Stop ID', 'Stop Name', 'Number of Routes', 'Number of Predictions', 'Number of Routes with Predictions', 'Routes with Predictions', 'Display Text']]
       } else if(name === 'vehicle') {
         var out = [['Timestamp', 'Vehicle ID', 'Route ID', 'Pattern ID', 'Work Piece ID', 'Providing Updates', 'Location Timestamp', 'Location Latitude', 'Location Longitude']]
       }
 
       parser.on('readable', function () {
         while(line = parser.read()) {
-          if(moment(line[0], 'YYYY-MM-DD HH:mm:ss').add(minuteFilter, 'minutes').isAfter(now)) {
+          var md = moment(line[0], 'YYYY-MM-DD HH:mm:ss')
+          if(md.isValid() && md.add(minuteFilter, 'minutes').isAfter(now)) {
             out.push(line)
           }
         }
