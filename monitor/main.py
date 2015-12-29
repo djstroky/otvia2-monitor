@@ -108,6 +108,19 @@ def parse_stop_html(html):
     return unicode(out).encode('utf-8')
 
 
+def no_data(fields):
+    '''Makes a dict row with no data for given fields
+    '''
+
+    row = dict()
+    for field in fields:
+        row[field] = 'No Data'
+
+    row['Timestamp'] = format_dt()
+
+    return row
+
+
 def parse_stop(json):
     '''Parses stop json response
     
@@ -129,7 +142,7 @@ def parse_stop(json):
     summary = Counter()
 
     if not json or 'ShelterArray' not in json:
-        writer.writerow(['No Data' for _ in range(len(fields))])
+        writer.writerow(no_data(fields))
         return summary
     
     for stop in json['ShelterArray']:
@@ -181,7 +194,7 @@ def parse_vehicle(json):
     summary = Counter()
 
     if not json or 'VehicleArray' not in json:
-        writer.writerow(['No Data' for _ in range(len(fields))])
+        writer.writerow(no_data(fields))
         return summary
     
     for vehicle in json['VehicleArray']:
@@ -221,7 +234,7 @@ def collect_for_type(url, parser):
     try:
         res = requests.get(conf.get('host') + url)
         out = res.json()
-    except ConnectionError:
+    except ConnectionError, ValueError:
         out = None
 
     return parser(out)
