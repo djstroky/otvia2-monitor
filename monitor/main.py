@@ -147,6 +147,9 @@ def parse_stop(json):
     
     for stop in json['ShelterArray']:
         stop = stop['Shelter']
+
+        if not stop['routeLogNumbers']:
+            continue
         
         summary['Number of Route-Stop Pairs'] += len(stop['routeLogNumbers'])
         
